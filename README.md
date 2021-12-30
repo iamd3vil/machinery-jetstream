@@ -1,0 +1,1 @@
+This is a broker interface implementation of machinery for NATS/Jetstream.
