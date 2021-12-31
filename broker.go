@@ -128,21 +128,21 @@ func (b *Broker) StartConsuming(cTag string, con int, tskPr iface.TaskProcessor)
 	b.consumerWG.Add(1)
 	defer b.consumerWG.Done()
 
-	sub, err := b.js.Subscribe(b.getTopic(tskPr), func(msg *nats.Msg) {
+	_, err := b.js.QueueSubscribe(b.getTopic(tskPr), b.durableName, func(msg *nats.Msg) {
 		// Add tasks wait group. Once message is processed its marked as done.
 		// This way when consumer is closing we wait for this wait group to finish before exiting.
 		b.tasksWG.Add(1)
 
 		// Add a message to task queue which is consumed elsewhere.
 		b.tskQueue <- msg.Data
-	}, nats.Durable(b.durableName))
 
+		msg.Ack()
+	}, nats.Durable(b.durableName), nats.AckExplicit())
 	if err != nil {
 		return false, fmt.Errorf("error while subscribing: %v", err)
 	}
 
 	<-b.gctx.Done()
-	sub.Unsubscribe()
 	return true, nil
 }
 
