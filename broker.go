@@ -149,8 +149,6 @@ func (b *Broker) StartConsuming(cTag string, con int, tskPr iface.TaskProcessor)
 func (b *Broker) StopConsuming() {
 	b.Broker.StopConsuming()
 	b.gcancel()
-	b.consumerWG.Wait()
-	b.tasksWG.Wait()
 
 	// Wait for consmer group to exit.
 	b.consumerWG.Wait()
