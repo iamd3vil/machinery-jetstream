@@ -1,0 +1,8 @@
+package backend
+
+type Config struct {
+	URL         string `json:"url"`
+	EnabledAuth bool   `json:"enabled_auth"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+}
