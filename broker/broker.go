@@ -1,4 +1,4 @@
-package machineryjetstream
+package broker
 
 import (
 	"bytes"
@@ -126,7 +126,6 @@ func (b *Broker) StartConsuming(cTag string, con int, tskPr iface.TaskProcessor)
 	}
 
 	b.consumerWG.Add(1)
-	defer b.consumerWG.Done()
 
 	_, err := b.js.QueueSubscribe(b.getTopic(tskPr), b.durableName, func(msg *nats.Msg) {
 		// Add tasks wait group. Once message is processed its marked as done.
@@ -143,7 +142,8 @@ func (b *Broker) StartConsuming(cTag string, con int, tskPr iface.TaskProcessor)
 	}
 
 	<-b.gctx.Done()
-	return true, nil
+	b.consumerWG.Done()
+	return b.GetRetry(), nil
 }
 
 func (b *Broker) StopConsuming() {
