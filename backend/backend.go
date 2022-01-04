@@ -3,7 +3,6 @@ package backend
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"time"
 
 	"github.com/RichardKnop/machinery/v2/backends/iface"
@@ -97,8 +96,33 @@ func (b *Backend) GroupTaskStates(groupUUID string, groupTaskCount int) ([]*task
 // whether the worker should trigger chord (true) or no if it has been triggered
 // already (false)
 func (b *Backend) TriggerChord(groupUUID string) (bool, error) {
-	// TODO: Think of a way to do this.
-	return false, errors.New("not implemented yet.")
+	// TODO: Do we need some kind of lock so that multiple workers don't trigger at the same time?
+	// Not sure how to do this with jetstream kv yet.
+	groupMeta, err := b.getGroupMeta(groupUUID)
+	if err != nil {
+		return false, err
+	}
+
+	// Chord has already been triggered, return false (should not trigger again)
+	if groupMeta.ChordTriggered {
+		return false, nil
+	}
+
+	// Set flag to true
+	groupMeta.ChordTriggered = true
+
+	// Update the group meta
+	encoded, err := json.Marshal(&groupMeta)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = b.kv.Put(groupUUID, encoded)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (b *Backend) mergeNewTaskState(newState *tasks.TaskState) {
