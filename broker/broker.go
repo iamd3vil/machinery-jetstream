@@ -38,8 +38,6 @@ type Broker struct {
 	// Global context which gets cancelled when StopConsuming is called.
 	gctx    context.Context
 	gcancel context.CancelFunc
-
-	durableName string
 }
 
 func New(bcfg *config.Config, cfg Config) (iface.Broker, error) {
@@ -56,12 +54,11 @@ func New(bcfg *config.Config, cfg Config) (iface.Broker, error) {
 	gctx, gcancel := context.WithCancel(context.Background())
 
 	return &Broker{
-		cfg:         bcfg,
-		js:          js,
-		gctx:        gctx,
-		gcancel:     gcancel,
-		durableName: cfg.GroupName,
-		Broker:      common.NewBroker(bcfg),
+		cfg:     bcfg,
+		js:      js,
+		gctx:    gctx,
+		gcancel: gcancel,
+		Broker:  common.NewBroker(bcfg),
 	}, nil
 }
 
@@ -127,7 +124,7 @@ func (b *Broker) StartConsuming(cTag string, con int, tskPr iface.TaskProcessor)
 
 	b.consumerWG.Add(1)
 
-	_, err := b.js.QueueSubscribe(b.getTopic(tskPr), b.durableName, func(msg *nats.Msg) {
+	_, err := b.js.QueueSubscribe(b.getTopic(tskPr), b.getTopic(tskPr), func(msg *nats.Msg) {
 		// Add tasks wait group. Once message is processed its marked as done.
 		// This way when consumer is closing we wait for this wait group to finish before exiting.
 		b.tasksWG.Add(1)
@@ -136,7 +133,7 @@ func (b *Broker) StartConsuming(cTag string, con int, tskPr iface.TaskProcessor)
 		b.tskQueue <- msg.Data
 
 		msg.Ack()
-	}, nats.Durable(b.durableName), nats.AckExplicit())
+	}, nats.Durable(b.getTopic(tskPr)), nats.AckExplicit())
 	if err != nil {
 		return false, fmt.Errorf("error while subscribing: %v", err)
 	}
