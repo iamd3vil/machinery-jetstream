@@ -23,7 +23,7 @@ type Broker struct {
 	js  nats.JetStreamContext
 
 	// Queue where consumed tasks are pushed.
-	tskQueue chan []byte
+	tskQueue chan *nats.Msg
 	// Queue where errors while processing tasks are pushed.
 	errQueue chan error
 
@@ -73,9 +73,10 @@ func (b *Broker) GetPendingTasks(queue string) ([]*tasks.Signature, error) {
 func (b *Broker) tskWorker(id int, taskPr iface.TaskProcessor) {
 	for msg := range b.tskQueue {
 		// Process the task.
-		if err := b.processTask(msg, taskPr); err != nil {
+		if err := b.processTask(msg.Data, taskPr); err != nil {
 			b.errQueue <- err
 		}
+		msg.Ack()
 
 		// Mark task as done in wait group once task is processed.
 		b.tasksWG.Done()
@@ -106,7 +107,7 @@ func (b *Broker) StartConsuming(cTag string, con int, tskPr iface.TaskProcessor)
 	// Call brokerfactory which initialized channels for stop and retry consumer.
 	b.Broker.StartConsuming(cTag, con, tskPr)
 	// Initialize task queue.
-	b.tskQueue = make(chan []byte, con)
+	b.tskQueue = make(chan *nats.Msg, con)
 	// Initialize error queue.
 	b.errQueue = make(chan error, con*2)
 
@@ -130,10 +131,8 @@ func (b *Broker) StartConsuming(cTag string, con int, tskPr iface.TaskProcessor)
 		b.tasksWG.Add(1)
 
 		// Add a message to task queue which is consumed elsewhere.
-		b.tskQueue <- msg.Data
-
-		msg.Ack()
-	}, nats.Durable(b.getTopic(tskPr)), nats.AckExplicit())
+		b.tskQueue <- msg
+	}, nats.Durable(b.getTopic(tskPr)), nats.AckExplicit(), nats.MaxAckPending(con*2))
 	if err != nil {
 		return false, fmt.Errorf("error while subscribing: %v", err)
 	}
