@@ -41,7 +41,13 @@ type Broker struct {
 }
 
 func New(bcfg *config.Config, cfg Config) (iface.Broker, error) {
-	conn, err := nats.Connect(cfg.URL)
+	opt := []nats.Option{}
+
+	if cfg.EnabledAuth {
+		opt = append(opt, nats.UserInfo(cfg.Username, cfg.Password))
+	}
+
+	conn, err := nats.Connect(cfg.URL, opt...)
 	if err != nil {
 		return nil, err
 	}
