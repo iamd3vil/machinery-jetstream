@@ -138,7 +138,7 @@ func (b *Broker) StartConsuming(cTag string, con int, tskPr iface.TaskProcessor)
 
 		// Add a message to task queue which is consumed elsewhere.
 		b.tskQueue <- msg
-	}, nats.Durable(b.getTopic(tskPr)), nats.AckExplicit(), nats.MaxAckPending(con*2))
+	}, nats.Durable(b.getTopic(tskPr)), nats.AckExplicit(), nats.MaxAckPending(con))
 	if err != nil {
 		return false, fmt.Errorf("error while subscribing: %v", err)
 	}
