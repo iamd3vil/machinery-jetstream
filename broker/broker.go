@@ -49,12 +49,12 @@ func New(bcfg *config.Config, cfg Config) (iface.Broker, error) {
 
 	conn, err := nats.Connect(cfg.URL, opt...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error connecting to nats: %v", err)
 	}
 
 	js, err := conn.JetStream()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error making a jetstream connection: %v", err)
 	}
 
 	gctx, gcancel := context.WithCancel(context.Background())

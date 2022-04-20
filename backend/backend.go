@@ -3,6 +3,7 @@ package backend
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/RichardKnop/machinery/v2/backends/iface"
@@ -27,12 +28,12 @@ func New(cnf *mconfig.Config, cfg Config) (iface.Backend, error) {
 
 	conn, err := nats.Connect(cfg.URL, opt...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error connecting to nats: %v", err)
 	}
 
 	js, err := conn.JetStream()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error making a jetstream connection: %v", err)
 	}
 
 	kv, err := js.KeyValue("machinery")
